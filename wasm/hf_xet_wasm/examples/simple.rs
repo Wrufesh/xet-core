@@ -175,10 +175,9 @@ pub async fn clean_file(file: web_sys::File, endpoint: String, jwt_token: String
         session_id: uuid::Uuid::new_v4().to_string(),
     };
 
-    let ctx = xet_runtime::core::XetContext::from_external(
-        tokio::runtime::Handle::current(),
+    let ctx = xet_runtime::core::XetContext::with_config(
         xet_runtime::config::XetConfig::new(),
-    );
+    ).expect("Failed to create XetContext");
     let upload_session = Arc::new(FileUploadSession::new(ctx, Arc::new(config)));
 
     let mut handle = upload_session.start_clean(0, None);

@@ -44,7 +44,7 @@ pub struct XetSession {
 #[wasm_bindgen(js_class = "XetSession")]
 impl XetSession {
     #[wasm_bindgen(constructor)]
-    pub fn new(endpoint: String, token_info: TokenInfo, token_refresher: TokenRefresher) -> Self {
+    pub fn new(endpoint: String, token_info: TokenInfo, token_refresher: TokenRefresher) -> Result<XetSession, JsValue> {
         let (token, token_expiration): xet_client::cas_client::auth::TokenInfo = token_info.into();
         let auth = AuthConfig {
             token,
@@ -65,15 +65,13 @@ impl XetSession {
             },
             session_id: uuid::Uuid::new_v4().to_string(),
         };
-        let ctx = xet_runtime::core::XetContext::from_external(
-            tokio::runtime::Handle::current(),
-            xet_runtime::config::XetConfig::new(),
-        );
+        let ctx = xet_runtime::core::XetContext::with_config(xet_runtime::config::XetConfig::new())
+            .map_err(convert_error)?;
         let upload = FileUploadSession::new(ctx, Arc::new(config));
 
-        Self {
+        Ok(Self {
             upload: Arc::new(upload),
-        }
+        })
     }
 
     // allows uploading a file from raw data if the data/file is not in a blob
