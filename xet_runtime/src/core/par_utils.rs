@@ -80,7 +80,9 @@ where
     T: Send + Sync + 'static,
     E: Send + Sync + 'static,
 {
-    let handle = tokio::runtime::Handle::current();
+    let handle = tokio::runtime::Handle::try_current().map_err(|_| {
+        ParutilsError::Infallible("No Tokio reactor running; must be called from within a Tokio runtime context".to_string())
+    })?;
     let mut js: JoinSet<Result<(usize, T), ParutilsError<E>>> = JoinSet::new();
     for (i, fut) in futures_it.enumerate() {
         let semaphore = max_concurrent.clone();
