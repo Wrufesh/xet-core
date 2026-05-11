@@ -43,7 +43,11 @@ impl DeduplicationDataInterface for UploadSessionDataManager {
         query_hashes: &[MerkleHash],
     ) -> Result<Option<(usize, FileDataSequenceEntry, bool)>> {
         for (hmac_key, shard) in self.shard.iter() {
-            let keyed_query_hashes: Vec<_> = query_hashes.iter().map(|h| h.hmac(*hmac_key)).collect();
+            let keyed_query_hashes: Vec<_> = if *hmac_key != MerkleHash::default() {
+                query_hashes.iter().map(|h| h.hmac(*hmac_key)).collect()
+            } else {
+                query_hashes.to_vec()
+            };
             if let Some((count, fdse)) = shard.chunk_hash_dedup_query(&keyed_query_hashes) {
                 return Ok(Some((count, fdse, true)));
             }
