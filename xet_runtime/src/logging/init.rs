@@ -16,7 +16,7 @@ use tracing_subscriber::{EnvFilter, Layer};
 use super::config::*;
 use super::constants::{DEFAULT_LOG_LEVEL_CONSOLE, DEFAULT_LOG_LEVEL_FILE};
 use crate::error_printer::ErrorPrinter;
-use crate::utils::ByteSize;
+use crate::utils::{get_pid, ByteSize};
 
 /// Global variable to hold the JoinHandle for the log cleanup thread
 static LOG_CLEANUP_HANDLE: Mutex<Option<JoinHandle<()>>> = Mutex::new(None);
@@ -163,7 +163,7 @@ pub fn log_file_in_dir(cfg: &LogDirConfig, dir: impl AsRef<Path>) -> PathBuf {
     // ISO 8601 basic, filename-safe (no colons): 20250915T083210123-0700
     let ts = now_fixed.format("%Y%m%dT%H%M%S%3f%z"); // %z => ±HHMM
 
-    let pid = std::process::id();
+    let pid = get_pid();
     let prefix = &cfg.filename_prefix;
     let filename = format!("{}_{}_{}.log", prefix, ts, pid);
     dir.as_ref().join(filename)

@@ -52,5 +52,21 @@ pub use guards::{ClosureGuard, CwdGuard, EnvVarGuard};
 #[cfg(not(target_family = "wasm"))]
 pub mod pipe;
 
+
 mod unique_id;
 pub use unique_id::UniqueId;
+
+/// Returns the current process ID.
+///
+/// On WASM targets, this always returns 0 to avoid panics, as process IDs
+/// are not supported on that platform.
+pub fn get_pid() -> u32 {
+    #[cfg(target_family = "wasm")]
+    {
+        0
+    }
+    #[cfg(not(target_family = "wasm"))]
+    {
+        std::process::id()
+    }
+}

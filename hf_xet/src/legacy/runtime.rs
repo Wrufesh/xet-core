@@ -9,6 +9,7 @@ use tracing::info;
 use xet_pkg::XetError;
 use xet_runtime::RuntimeError;
 use xet_runtime::core::XetContext;
+use xet_runtime::utils::get_pid;
 use xet_runtime::core::sync_primatives::spawn_os_thread;
 
 lazy_static! {
@@ -72,7 +73,7 @@ fn check_sigint_handler() -> Result<(), RuntimeError> {
     SIGINT_DETECTED.store(false, Ordering::SeqCst);
 
     let stored_pid = SIGINT_HANDLER_INSTALL_PID.0.load(Ordering::SeqCst);
-    let pid = std::process::id();
+    let pid = get_pid();
 
     if stored_pid == pid {
         return Ok(());
@@ -104,7 +105,7 @@ pub(crate) fn perform_sigint_shutdown() {
     if let Some((runtime_pid, ref ctx)) = maybe_runtime {
         // Only do anything with the runtime if we're on the right process.
         // Otherwise, it's none of our business.
-        if runtime_pid == std::process::id() && ctx.runtime.external_executor_count() != 0 {
+        if runtime_pid == get_pid() && ctx.runtime.external_executor_count() != 0 {
             eprintln!("Cancellation requested; stopping current tasks.");
             ctx.runtime.perform_sigint_shutdown();
         }
@@ -144,7 +145,7 @@ pub fn init_threadpool() -> Result<XetContext, RuntimeError> {
     let mut guard = MULTITHREADED_RUNTIME.write().unwrap();
 
     // Has another thread done this already?
-    let pid = std::process::id();
+    let pid = get_pid();
 
     if let Some((runtime_pid, ref existing)) = *guard {
         if runtime_pid == pid {
@@ -190,7 +191,7 @@ pub(crate) fn get_or_init_runtime() -> Result<XetContext, RuntimeError> {
     {
         let guard = MULTITHREADED_RUNTIME.read().unwrap();
         if let Some((runtime_pid, ref existing)) = *guard {
-            let pid = std::process::id();
+            let pid = get_pid();
 
             if runtime_pid == pid {
                 return Ok(existing.clone());

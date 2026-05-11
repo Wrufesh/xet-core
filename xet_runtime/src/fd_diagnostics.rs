@@ -9,6 +9,8 @@ static BASELINE_FD_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[cfg(feature = "fd-track")]
 static PEAK_FD_COUNT: AtomicUsize = AtomicUsize::new(0);
 
+use crate::utils::get_pid;
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 const PROC_FD_PATH: &str = if cfg!(target_os = "macos") {
     "/dev/fd"
@@ -261,7 +263,7 @@ pub fn print_new_fds(label: &str, before: &[(i32, String)], after: &[(i32, Strin
             debug!(target: "xet_runtime::fd_track", label, fd = *fd, target = %target, "FD diff entry");
         }
 
-        let pid = std::process::id();
+        let pid = get_pid();
         let fd_list: String = new_fds.iter().map(|(fd, _)| fd.to_string()).collect::<Vec<_>>().join(",");
         if let Ok(output) = std::process::Command::new("lsof")
             .args(["-p", &pid.to_string(), "-a", "-d", &fd_list])
