@@ -20,6 +20,7 @@ use tracing::info;
 
 use crate::config::XetConfig;
 use crate::error::RuntimeError;
+use crate::utils::get_pid;
 #[cfg(feature = "fd-track")]
 use crate::fd_diagnostics::{report_fd_count, track_fd_scope};
 #[cfg(not(target_family = "wasm"))]
@@ -204,13 +205,13 @@ impl XetRuntime {
             handle_ref: OnceLock::new(),
             external_executor_count: 0.into(),
             sigint_shutdown: false.into(),
-            creation_pid: std::process::id(),
+            creation_pid: get_pid(),
             #[cfg(not(target_family = "wasm"))]
             system_monitor: system_monitor_for_config(config),
         });
 
         let rt_weak = Arc::downgrade(&rt);
-        let pid = std::process::id();
+        let pid = get_pid();
         let set_threadlocal_reference = move || {
             THREAD_THREADPOOL_REF.set(Some((pid, rt_weak.clone())));
         };
@@ -286,7 +287,7 @@ impl XetRuntime {
             handle_ref: rt_handle.into(),
             external_executor_count: 0.into(),
             sigint_shutdown: false.into(),
-            creation_pid: std::process::id(),
+            creation_pid: get_pid(),
             #[cfg(not(target_family = "wasm"))]
             system_monitor: system_monitor_for_config(config),
         });
@@ -306,7 +307,7 @@ impl XetRuntime {
             handle_ref: rt_handle.into(),
             external_executor_count: 0.into(),
             sigint_shutdown: false.into(),
-            creation_pid: std::process::id(),
+            creation_pid: get_pid(),
             #[cfg(not(target_family = "wasm"))]
             system_monitor: None,
         })
@@ -318,7 +319,7 @@ impl XetRuntime {
     /// threads created by an owned runtime. External runtimes do not set this.
     #[inline]
     pub fn current_if_exists() -> Option<Arc<Self>> {
-        let pid = std::process::id();
+        let pid = get_pid();
         THREAD_THREADPOOL_REF.with_borrow(|entry| {
             entry
                 .as_ref()
@@ -483,11 +484,11 @@ impl XetRuntime {
         T: Send + 'static,
     {
         self.check_sigint()?;
-        if std::process::id() != self.creation_pid {
+        if get_pid() != self.creation_pid {
             return Err(RuntimeError::InvalidRuntime(format!(
                 "XetRuntime was created in process {} but is being used in process {}",
                 self.creation_pid,
-                std::process::id(),
+                get_pid(),
             )));
         }
         match &self.backend {
@@ -512,11 +513,11 @@ impl XetRuntime {
         F::Output: Send + 'static,
     {
         self.check_sigint()?;
-        if std::process::id() != self.creation_pid {
+        if get_pid() != self.creation_pid {
             return Err(RuntimeError::InvalidRuntime(format!(
                 "XetRuntime was created in process {} but is being used in process {}",
                 self.creation_pid,
-                std::process::id(),
+                get_pid(),
             )));
         }
         if matches!(self.backend, RuntimeBackend::External { .. }) {
@@ -591,7 +592,7 @@ impl XetRuntime {
     {
         let pool_weak = Arc::downgrade(self);
         self.handle().spawn_blocking(move || {
-            let pid = std::process::id();
+            let pid = get_pid();
             THREAD_THREADPOOL_REF.set(Some((pid, pool_weak)));
             f()
         })
@@ -686,7 +687,7 @@ impl Drop for XetRuntime {
         // parent do not exist here. shutdown_timeout() would block ~5 s waiting on futexes
         // that never fire. Use discard_runtime() (std::mem::forget) instead — the OS
         // reclaims all memory when the child exits.
-        if self.creation_pid != std::process::id() {
+        if self.creation_pid != get_pid() {
             self.discard_runtime();
             return;
         }

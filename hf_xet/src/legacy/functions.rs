@@ -12,6 +12,7 @@ use rand::RngExt;
 use tracing::debug;
 use xet_pkg::legacy::progress_tracking::TrackingProgressUpdater;
 use xet_pkg::legacy::{Sha256Policy, XetFileInfo, data_client};
+use xet_runtime::utils::get_pid;
 
 use super::progress_update::WrappedProgressUpdater;
 use super::runtime::async_run;
@@ -101,7 +102,7 @@ pub fn upload_bytes(
     async_run(py, async move {
         debug!(
             "upload_bytes (legacy) call {x:x}: (PID = {}) Uploading {} files as bytes.",
-            std::process::id(),
+            get_pid(),
             file_contents.len(),
         );
 
@@ -183,7 +184,7 @@ pub fn upload_files(
     async_run(py, async move {
         debug!(
             "upload_files (legacy) call {x:x}: (PID = {}) Uploading {} files.",
-            std::process::id(),
+            get_pid(),
             file_paths.len(),
         );
 
@@ -259,7 +260,7 @@ pub fn download_files(
     async_run(py, async move {
         debug!(
             "download_files (legacy) call {x:x}: (PID = {}) Downloading {} files.",
-            std::process::id(),
+            get_pid(),
             file_infos.len(),
         );
 
